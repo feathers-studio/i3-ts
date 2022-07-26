@@ -15,3 +15,19 @@ export function copy(src: Uint8Array, dst: Uint8Array, off = 0): number {
 }
 
 export const equals = (a: Uint8Array, b: Uint8Array) => a.every((x, i) => x === b[i]);
+
+export async function readAll(src: Deno.Reader, dst: Uint8Array) {
+	let n = 0;
+	while (n < dst.byteLength) {
+		const read = await src.read(dst.subarray(n));
+
+		// reader has ended
+		if (read === null)
+			if (n === 0) return null;
+			else return n;
+
+		n += read;
+	}
+
+	return n;
+}
