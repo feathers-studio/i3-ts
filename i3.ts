@@ -82,6 +82,7 @@ export async function Connect() {
 
 	const events = Event();
 	const conn = await connect(path);
+	const queue: ((v: unknown) => void)[] = [];
 
 	async function listen() {
 		const b = new Uint8Array(i3_HEADER);
@@ -102,22 +103,22 @@ export async function Connect() {
 			const isEvent = type >>> 31 === 1;
 			const trueType = isEvent ? toEvent(type & 0b01111111111111111111111111111111) : toRes(type);
 
-			if (length === 0) {
-				// no more payload to parse
-				events.emit(trueType, {});
-				continue;
-			}
+			let payload = {};
 
-			{
-				// start parsing payload
-
+			if (length > 0) {
 				// read until length
 				const buf = new Uint8Array(length);
 				const read = await readAll(conn, buf);
 
 				if (read === null || read < length) throw new TypeError("Unexpected end of payload");
+				payload = JSON.parse(decode(buf));
+			}
 
-				events.emit(trueType, JSON.parse(decode(buf)));
+			if (isEvent) events.emit(trueType, payload);
+			else {
+				const resolve = queue.shift();
+				if (!resolve) throw new Error("Unexpected response without command");
+				resolve(payload);
 			}
 		}
 	}
@@ -126,6 +127,10 @@ export async function Connect() {
 
 	return {
 		...events,
-		message: (type: i3MSGTYPE, payload: string) => conn.write(i3fmt(type, payload)),
+		message: (type: i3MSGTYPE, payload: string) =>
+			new Promise(r => {
+				conn.write(i3fmt(type, payload));
+				queue.push(r);
+			}),
 	};
 }
