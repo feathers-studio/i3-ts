@@ -18,6 +18,8 @@ const i3 = await Connect();
 
 // sending a message
 const [{ success }] = await i3.runCommand("exec flameshot");
+const workspaces = await i3.getWorkspaces();
+const outputs = await i3.getOutputs();
 
 // listening on events
 i3.on(Events.Workspace, ctx => {
