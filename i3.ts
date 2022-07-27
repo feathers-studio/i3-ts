@@ -1,7 +1,7 @@
 import { Event } from "./events.ts";
 import { connect, run } from "./deno.ts";
 import { decode, encode, equals, readAll, UnionToIntersection } from "./util.ts";
-import { i3_EVENT_TYPE, i3_MSG_TYPE, i3_REPLY_TYPE } from "./enum.ts";
+import { i3_MSG_TYPE } from "./enum.ts";
 import { Messages } from "./message-types.ts";
 
 const i3_MAGIC = encode("i3-ipc");
@@ -133,22 +133,3 @@ export async function Connect() {
 
 	return i3;
 }
-
-export namespace Enums {
-	export import Messages = i3_MSG_TYPE;
-	export import Replies = i3_REPLY_TYPE;
-	export import Events = i3_EVENT_TYPE;
-}
-
-export { i3_EVENT_TYPE as Events };
-
-export const version = {
-	/**
-	 * These bindings were written with this version of i3
-	 */
-	i3: "4.20.1-88-g522a1a22",
-	/**
-	 * i3-gaps
-	 */
-	gaps: true,
-} as const;
