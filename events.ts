@@ -1,6 +1,5 @@
-type EventCtx = {
-	[k: string]: any;
-};
+import { i3_EVENT_TYPE } from "./enum.ts";
+import { EventCtx } from "./event-types.ts";
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
 type Intersect<T> = T extends {} ? UnionToIntersection<T[keyof T]> : never;
@@ -18,15 +17,18 @@ type EventTypes = Intersect<{
 }>;
 
 export const Event = () => {
-	const listeners: Listeners = {};
+	const listeners = Object.fromEntries(
+		Object.keys(i3_EVENT_TYPE).map(each => [each, []] as const),
+		// help TypeScript because we know the correct types
+	) as unknown as Listeners;
 
-	const emit: Emitters = (event: keyof Listeners, ctx: any) => listeners[event].forEach(listener => listener(ctx));
+	const emit: Emitters = (event: i3_EVENT_TYPE, ctx: any) => listeners[event].forEach(listener => listener(ctx));
 
-	const on: EventTypes = (event: keyof Listeners, listener: any) => {
+	const on: EventTypes = (event: i3_EVENT_TYPE, listener: any) => {
 		listeners[event].push(listener);
 	};
 
-	const off: EventTypes = (event: keyof Listeners, listener) => {
+	const off: EventTypes = (event: i3_EVENT_TYPE, listener) => {
 		const idx = listeners[event].findIndex(l => l === listener);
 		listeners[event].splice(idx, 1);
 	};
