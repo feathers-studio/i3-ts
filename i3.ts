@@ -99,17 +99,18 @@ export async function Connect() {
 			new Promise(r => {
 				// TODO: special handling if payload is restart / exit
 
-				conn.write(
-					i3fmt(
-						type,
-						// object or array, serialise as-is
-						payload && typeof payload === "object"
-							? JSON.stringify(payload)
-							: // if null, send empty string; otherwise send string
-							  payload || "",
-					),
-				);
-				queue.push([type, r]);
+				return conn
+					.write(
+						i3fmt(
+							type,
+							// object or array, serialise as-is
+							payload && typeof payload === "object"
+								? JSON.stringify(payload)
+								: // if null, send empty string; otherwise send string
+								  payload || "",
+						),
+					)
+					.then(() => queue.push([type, r]));
 			})) as UnionToIntersection<
 			{
 				[k in keyof Messages]: (type: k, payload: Messages[k]["payload"]) => Promise<Messages[k]["reply"]>;
