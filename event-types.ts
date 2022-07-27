@@ -1,5 +1,6 @@
 import { i3_EVENT_TYPE } from "./enum.ts";
 
+// Based on https://github.com/i3/i3/blob/535da94536a005fb60e29f7bf902e49390b9cc10/src/ipc.c#L338
 type Node = {
 	id: number;
 	type: "root" | "output" | "con" | "floating_con" | "workspace" | "dockarea";
