@@ -146,6 +146,9 @@ export interface Node {
 		| "tooltip"
 		| "notification"
 		| "unknown";
+	/**
+	 * Only available on i3-gaps
+	 */
 	gaps?: {
 		inner: number;
 		outer: number;
