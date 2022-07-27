@@ -1,54 +1,12 @@
-import { connect, run } from "./deno.ts";
 import { Event } from "./events.ts";
+import { connect, run } from "./deno.ts";
 import { decode, encode, equals, readAll } from "./util.ts";
-
-export enum i3MSGTYPE {
-	RUN_COMMAND,
-	GET_WORKSPACES,
-	SUBSCRIBE,
-	GET_OUTPUTS,
-	GET_TREE,
-	GET_MARKS,
-	GET_BAR_CONFIG,
-	GET_VERSION,
-	GET_BINDING_MODES,
-	GET_CONFIG,
-	SEND_TICK,
-	SYNC,
-	GET_BINDING_STATE,
-}
-
-export enum i3REPLYTYPE {
-	COMMAND,
-	WORKSPACES,
-	SUBSCRIBE,
-	OUTPUTS,
-	TREE,
-	MARKS,
-	BAR_CONFIG,
-	VERSION,
-	BINDING_MODES,
-	CONFIG,
-	TICK,
-	SYNC,
-	BINDING_STATE,
-}
-
-export enum i3EVENTS {
-	WORKSPACE,
-	OUTPUT,
-	MODE,
-	WINDOW,
-	BARCONFIG_UPDATE,
-	BINDING,
-	SHUTDOWN,
-	TICK,
-}
+import { i3_EVENT_TYPE, i3_MSG_TYPE, i3_REPLY_TYPE } from "./enum.ts";
 
 const i3_MAGIC = encode("i3-ipc");
 const i3_HEADER = i3_MAGIC.length + 8;
 
-const i3fmt = (type: i3MSGTYPE, payload: string = "") => {
+const i3fmt = (type: i3_MSG_TYPE, payload: string = "") => {
 	const pl = encode(payload);
 	const buf = new Uint8Array(i3_HEADER + pl.length);
 	const dv = new DataView(buf.buffer);
@@ -74,15 +32,12 @@ const i3fmt = (type: i3MSGTYPE, payload: string = "") => {
 	return buf;
 };
 
-const toEvent = (type: i3REPLYTYPE) => String(type);
-const toRes = (type: i3REPLYTYPE) => String(type);
-
 export async function Connect() {
 	const path = (await run(["i3", "--get-socketpath"])).trim();
 
 	const events = Event();
 	const conn = await connect(path);
-	const queue: ((v: unknown) => void)[] = [];
+	const queue: [i3_MSG_TYPE, (v: unknown) => void][] = [];
 
 	async function listen() {
 		const b = new Uint8Array(i3_HEADER);
@@ -99,9 +54,10 @@ export async function Connect() {
 			// b is at least header length
 			const header = new DataView(b.buffer, offset, 8);
 			const length = header.getUint32(0, true);
-			const type = header.getUint32(4, true) as i3REPLYTYPE;
+			const type = header.getUint32(4, true);
+
+			// check if high bit is 1
 			const isEvent = type >>> 31 === 1;
-			const trueType = isEvent ? toEvent(type & 0b01111111111111111111111111111111) : toRes(type);
 
 			let payload = {};
 
@@ -114,10 +70,17 @@ export async function Connect() {
 				payload = JSON.parse(decode(buf));
 			}
 
-			if (isEvent) events.emit(trueType, payload);
+			if (isEvent)
+				events.emit(
+					// mask high bit
+					type & 0b01111111111111111111111111111111,
+					// @ts-expect-error cannot correctly type payload without runtime type-checking
+					payload,
+				);
 			else {
-				const resolve = queue.shift();
-				if (!resolve) throw new Error("Unexpected response without command");
+				const [expected, resolve] = queue.shift() || [];
+				if (!resolve) throw new Error("Unexpected response from i3");
+				if (type !== expected) throw new TypeError("Unexpected response type");
 				resolve(payload);
 			}
 		}
@@ -127,10 +90,10 @@ export async function Connect() {
 
 	return {
 		...events,
-		message: (type: i3MSGTYPE, payload: string) =>
+		message: (type: i3_MSG_TYPE, payload: string) =>
 			new Promise(r => {
 				conn.write(i3fmt(type, payload));
-				queue.push(r);
+				queue.push([type, r]);
 			}),
 	};
 }
