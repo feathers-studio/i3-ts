@@ -31,3 +31,5 @@ export async function readAll(src: Deno.Reader, dst: Uint8Array) {
 
 	return n;
 }
+
+export type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;

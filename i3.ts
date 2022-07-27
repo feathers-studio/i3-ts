@@ -1,7 +1,8 @@
 import { Event } from "./events.ts";
 import { connect, run } from "./deno.ts";
-import { decode, encode, equals, readAll } from "./util.ts";
+import { decode, encode, equals, readAll, UnionToIntersection } from "./util.ts";
 import { i3_EVENT_TYPE, i3_MSG_TYPE, i3_REPLY_TYPE } from "./enum.ts";
+import { Messages } from "./message-types.ts";
 
 const i3_MAGIC = encode("i3-ipc");
 const i3_HEADER = i3_MAGIC.length + 8;
@@ -35,9 +36,9 @@ const i3fmt = (type: i3_MSG_TYPE, payload: string = "") => {
 export async function Connect() {
 	const path = (await run(["i3", "--get-socketpath"])).trim();
 
-	const events = Event();
+	const { emit, off, on } = Event();
 	const conn = await connect(path);
-	const queue: [i3_MSG_TYPE, (v: unknown) => void][] = [];
+	const queue: [i3_MSG_TYPE, (v: any) => void][] = [];
 
 	async function listen() {
 		const b = new Uint8Array(i3_HEADER);
@@ -71,7 +72,7 @@ export async function Connect() {
 			}
 
 			if (isEvent)
-				events.emit(
+				emit(
 					// mask high bit
 					type & 0b01111111111111111111111111111111,
 					// @ts-expect-error cannot correctly type payload without runtime type-checking
@@ -88,12 +89,66 @@ export async function Connect() {
 
 	listen();
 
-	return {
-		...events,
-		message: (type: i3_MSG_TYPE, payload: string) =>
+	const i3 = {
+		on,
+		off,
+		message: (<T extends i3_MSG_TYPE>(
+			type: i3_MSG_TYPE,
+			payload: Messages[T]["payload"],
+		): Promise<Messages[T]["reply"]> =>
 			new Promise(r => {
-				conn.write(i3fmt(type, payload));
+				// TODO: special handling if payload is restart / exit
+
+				conn.write(
+					i3fmt(
+						type,
+						// object or array, serialise as-is
+						payload && typeof payload === "object"
+							? JSON.stringify(payload)
+							: // if null, send empty string; otherwise send string
+							  payload || "",
+					),
+				);
 				queue.push([type, r]);
-			}),
+			})) as UnionToIntersection<
+			{
+				[k in keyof Messages]: (type: k, payload: Messages[k]["payload"]) => Promise<Messages[k]["reply"]>;
+			}[keyof Messages]
+		>,
+		runCommand: (payload: Messages[i3_MSG_TYPE.RUN_COMMAND]["payload"]) =>
+			i3.message(i3_MSG_TYPE.RUN_COMMAND, payload),
+		getWorkspaces: () => i3.message(i3_MSG_TYPE.GET_WORKSPACES, null),
+		subscribe: (payload: Messages[i3_MSG_TYPE.SUBSCRIBE]["payload"]) => i3.message(i3_MSG_TYPE.SUBSCRIBE, payload),
+		getOutputs: () => i3.message(i3_MSG_TYPE.GET_OUTPUTS, null),
+		getTree: () => i3.message(i3_MSG_TYPE.GET_TREE, null),
+		getMarks: () => i3.message(i3_MSG_TYPE.GET_MARKS, null),
+		getBarConfig: () => i3.message(i3_MSG_TYPE.GET_BAR_CONFIG, null),
+		getVersion: () => i3.message(i3_MSG_TYPE.GET_VERSION, null),
+		getBindingModes: () => i3.message(i3_MSG_TYPE.GET_BINDING_MODES, null),
+		getConfig: () => i3.message(i3_MSG_TYPE.GET_CONFIG, null),
+		sendTick: (payload: Messages[i3_MSG_TYPE.SEND_TICK]["payload"]) => i3.message(i3_MSG_TYPE.SEND_TICK, payload),
+		sync: (payload: Messages[i3_MSG_TYPE.SYNC]["payload"]) => i3.message(i3_MSG_TYPE.SYNC, payload),
+		getBindingState: (payload: Messages[i3_MSG_TYPE.SYNC]["payload"]) => i3.message(i3_MSG_TYPE.SYNC, payload),
 	};
+
+	return i3;
 }
+
+export namespace Enums {
+	export import Messages = i3_MSG_TYPE;
+	export import Replies = i3_REPLY_TYPE;
+	export import Events = i3_EVENT_TYPE;
+}
+
+export { i3_EVENT_TYPE as Events };
+
+export const version = {
+	/**
+	 * These bindings were written with this version of i3
+	 */
+	i3: "4.20.1-88-g522a1a22",
+	/**
+	 * i3-gaps
+	 */
+	gaps: true,
+} as const;

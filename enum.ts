@@ -1,4 +1,4 @@
-export enum i3_MSG_TYPE {
+export const enum i3_MSG_TYPE {
 	RUN_COMMAND,
 	GET_WORKSPACES,
 	SUBSCRIBE,
@@ -14,7 +14,7 @@ export enum i3_MSG_TYPE {
 	GET_BINDING_STATE,
 }
 
-export enum i3_REPLY_TYPE {
+export const enum i3_REPLY_TYPE {
 	COMMAND,
 	WORKSPACES,
 	SUBSCRIBE,
@@ -30,7 +30,7 @@ export enum i3_REPLY_TYPE {
 	BINDING_STATE,
 }
 
-export enum i3_EVENT_TYPE {
+export const enum i3_EVENT_TYPE {
 	WORKSPACE,
 	OUTPUT,
 	MODE,
@@ -40,3 +40,14 @@ export enum i3_EVENT_TYPE {
 	SHUTDOWN,
 	TICK,
 }
+
+export const EVENTS = [
+	"WORKSPACE",
+	"OUTPUT",
+	"MODE",
+	"WINDOW",
+	"BARCONFIG_UPDATE",
+	"BINDING",
+	"SHUTDOWN",
+	"TICK",
+] as const;

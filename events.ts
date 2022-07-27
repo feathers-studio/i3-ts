@@ -18,9 +18,12 @@ type EventTypes = Intersect<{
 
 export const Event = () => {
 	const listeners = Object.fromEntries(
-		Object.keys(i3_EVENT_TYPE).map(each => [each, []] as const),
+		// There are 0-7 events, must be kept in sync with enum.ts > i3_EVENT_TYPE
+		Array(8)
+			.fill([])
+			.map((each, idx) => [idx, each] as const),
 		// help TypeScript because we know the correct types
-	) as unknown as Listeners;
+	) as Listeners;
 
 	const emit: Emitters = (event: i3_EVENT_TYPE, ctx: any) => listeners[event].forEach(listener => listener(ctx));
 
