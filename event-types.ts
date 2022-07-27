@@ -1,7 +1,7 @@
 import { i3_EVENT_TYPE } from "./enum.ts";
 
 // Based on https://github.com/i3/i3/blob/535da94536a005fb60e29f7bf902e49390b9cc10/src/ipc.c#L338
-type Node = {
+export interface Node {
 	id: number;
 	type: "root" | "output" | "con" | "floating_con" | "workspace" | "dockarea";
 	/**
@@ -74,30 +74,30 @@ type Node = {
 	nodes: Node[]; // search inplace_restart
 	depth?: string;
 	previous_workspace_name?: string; // only for type: root, still optional
-};
+}
 
-export type Workspace = Node & {
+export interface Workspace extends Node {
 	type: "workspace";
-};
+}
 
-export type Container = Node & {
+export interface Container extends Node {
 	type: "con";
-};
+}
 
-export type WorkspaceEvent = {
+export interface WorkspaceEvent {
 	change: "focus" | "init" | "empty" | "urgent" | "reload" | "rename" | "restored" | "move";
 	current: Workspace;
 	old: Workspace;
-};
+}
 
-export type OutputEvent = {
+export interface OutputEvent {
 	/**
 	 * Type of the change (currently only "unspecified").
 	 */
 	change: "unspecified";
-};
+}
 
-export type ModeEvent = {
+export interface ModeEvent {
 	/**
 	 * The name of current mode in use. The name is the same as specified in config when creating a mode. The default mode is simply named default.
 	 */
@@ -106,9 +106,9 @@ export type ModeEvent = {
 	 * Whether pango markup shall be used for displaying this mode.
 	 */
 	pango_markup: boolean;
-};
+}
 
-export type WindowEvent = {
+export interface WindowEvent {
 	/**
 	 * Indicates the type of change:
 	 * * new – the window has become managed by i3
@@ -126,9 +126,9 @@ export type WindowEvent = {
 	 * Window’s parent container. Be aware that for the "new" event, the container will hold the initial name of the newly reparented window (e.g. if you run urxvt with a shell that changes the title, you will still at this point get the window title as "urxvt").
 	 */
 	container: Container;
-};
+}
 
-export type BarconfigUpdateEvent = {
+export interface BarconfigUpdateEvent {
 	/**
 	 * The ID for this bar. Included in case you request multiple configurations and want to differentiate the different replies.
 	 */
@@ -250,9 +250,9 @@ export type BarconfigUpdateEvent = {
 		 */
 		binding_mode_border: string;
 	};
-};
+}
 
-export type MouseBinding = {
+export interface MouseBinding {
 	/**
 	 * This will be "keyboard" or "mouse" depending on whether or not this was a keyboard or a mouse binding.
 	 */
@@ -265,9 +265,9 @@ export type MouseBinding = {
 	 * If this is a keyboard binding that was configured with bindsym, this field will contain the given symbol. Otherwise it will be null.
 	 */
 	symbol: null;
-};
+}
 
-export type KeyboardBinding = {
+export interface KeyboardBinding {
 	/**
 	 * This will be "keyboard" or "mouse" depending on whether or not this was a keyboard or a mouse binding.
 	 */
@@ -280,9 +280,9 @@ export type KeyboardBinding = {
 	 * If this is a keyboard binding that was configured with bindsym, this field will contain the given symbol. Otherwise it will be null.
 	 */
 	symbol: string;
-};
+}
 
-export type BindingEvent = {
+export interface BindingEvent {
 	/**
 	 * Indicates what sort of binding event was triggered (right now it will always be "run" but may be expanded in the future).
 	 */
@@ -300,16 +300,16 @@ export type BindingEvent = {
 		 */
 		event_state_mask: string[];
 	} & (MouseBinding | KeyboardBinding);
-};
+}
 
-export type ShutdownEvent = {
+export interface ShutdownEvent {
 	/**
 	 * Indicates why the ipc is shutting down. It can be either "restart" or "exit".
 	 */
 	change: "exit" | "restart";
-};
+}
 
-export type TickSubscribedEvent = {
+export interface TickSubscribedEvent {
 	/**
 	 * `true` if subscribed to the TICK event.
 	 */
@@ -318,9 +318,9 @@ export type TickSubscribedEvent = {
 	 * Empty string if subscribed to the TICK event.
 	 */
 	payload: "";
-};
+}
 
-export type SendTickResponseEvent = {
+export interface SendTickResponseEvent {
 	/**
 	 * `false` if in response to a SEND_TICK message.
 	 */
@@ -329,11 +329,11 @@ export type SendTickResponseEvent = {
 	 * Arbitrary string sent as payload to SEND_TICK.
 	 */
 	payload: string;
-};
+}
 
 export type TickEvent = TickSubscribedEvent | SendTickResponseEvent;
 
-export type EventCtx = {
+export interface EventCtx {
 	[i3_EVENT_TYPE.WORKSPACE]: WorkspaceEvent;
 	[i3_EVENT_TYPE.OUTPUT]: OutputEvent;
 	[i3_EVENT_TYPE.MODE]: ModeEvent;
@@ -342,4 +342,4 @@ export type EventCtx = {
 	[i3_EVENT_TYPE.BINDING]: BindingEvent;
 	[i3_EVENT_TYPE.SHUTDOWN]: ShutdownEvent;
 	[i3_EVENT_TYPE.TICK]: TickEvent;
-};
+}
